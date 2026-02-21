@@ -3,165 +3,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>상하이 여행 앨범</title>
+    <title>Shanghai Memories | 2026</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Noto+Sans+KR:wght@300;400;700&display=swap');
 
         :root {
-            --bg-color: #f0f2f5;
-            --card-bg: #ffffff;
-            --text-main: #1c1e21;
-            --text-sub: #65676b;
-            --accent: #1877f2;
+            --bg-color: #f8f5f2;
+            --accent-color: #a67c52;
+            --text-dark: #2d2d2d;
+            --text-light: #7a7a7a;
+            --card-shadow: 0 15px 35px rgba(0,0,0,0.08);
         }
+
+        * { box-sizing: border-box; }
 
         body {
             font-family: 'Noto Sans KR', sans-serif;
             background-color: var(--bg-color);
+            color: var(--text-dark);
             margin: 0;
-            padding: 40px 20px;
-            color: var(--text-main);
+            line-height: 1.6;
         }
 
+        /* Header Styling */
         header {
+            height: 60vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             text-align: center;
-            max-width: 800px;
-            margin: 0 auto 50px;
+            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url('사진/KakaoTalk_20260221_130137124.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: white;
+            margin-bottom: 80px;
         }
 
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            color: var(--text-main);
-            letter-spacing: -1px;
+        header h1 {
+            font-family: 'Bodoni Moda', serif;
+            font-size: 4.5rem;
+            margin: 0;
+            font-style: italic;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.3);
         }
 
         header p {
-            color: var(--text-sub);
-            font-size: 1.1rem;
+            font-size: 1.2rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-top: 10px;
         }
 
-        .album-container {
-            max-width: 1100px;
+        /* Main Layout */
+        .container {
+            max-width: 1200px;
             margin: 0 auto;
+            padding: 0 20px;
         }
 
-        .date-section {
-            margin-bottom: 40px;
-        }
-
-        .date-header {
-            font-size: 1.4rem;
-            font-weight: 700;
+        .date-badge {
+            display: inline-block;
+            background: var(--accent-color);
+            color: white;
+            padding: 5px 20px;
+            border-radius: 50px;
+            font-size: 0.9rem;
             margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #ddd;
-            display: flex;
-            align-items: center;
         }
 
-        .date-header::before {
-            content: '📅';
-            margin-right: 10px;
+        .section-title {
+            font-family: 'Bodoni Moda', serif;
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+            border-left: 4px solid var(--accent-color);
+            padding-left: 20px;
         }
 
-        .photo-grid {
+        /* Photo Grid & Cards */
+        .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 25px;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 40px;
+            margin-bottom: 100px;
         }
 
         .photo-card {
-            background: var(--card-bg);
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            background: white;
+            padding: 15px 15px 40px 15px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.4s ease;
             cursor: pointer;
-            position: relative;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .photo-card.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .photo-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 35px rgba(0,0,0,0.1);
+            transform: translateY(-10px) rotate(1deg);
         }
 
         .photo-card img {
             width: 100%;
-            height: 350px;
+            height: 400px;
             object-fit: cover;
             display: block;
-            transition: transform 0.5s ease;
+            margin-bottom: 20px;
         }
 
-        .photo-card:hover img {
-            transform: scale(1.05);
+        .photo-card .caption {
+            font-family: 'Bodoni Moda', serif;
+            font-style: italic;
+            font-size: 1.2rem;
+            text-align: center;
+            color: var(--text-light);
         }
 
-        .photo-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.7));
-            padding: 20px;
-            color: white;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+        /* Lightbox Styling */
+        #lightbox {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            cursor: zoom-out;
         }
 
-        .photo-card:hover .photo-overlay {
-            opacity: 1;
+        #lightbox img {
+            max-width: 90%;
+            max-height: 90%;
+            border: 10px solid white;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
         }
 
-        .photo-title {
-            font-weight: 500;
-            font-size: 1rem;
+        /* Footer */
+        footer {
+            padding: 80px 0;
+            text-align: center;
+            background: #2d2d2d;
+            color: #a67c52;
+            font-family: 'Bodoni Moda', serif;
         }
 
         @media (max-width: 768px) {
-            .photo-grid { grid-template-columns: 1fr; }
-            h1 { font-size: 2rem; }
+            header h1 { font-size: 2.5rem; }
+            .grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
+
     <header>
-        <h1>🇨🇳 상하이 여행 기록</h1>
-        <p>2026년 2월의 소중한 순간들을 담았습니다.</p>
+        <p>A Journey to the East</p>
+        <h1>Shanghai</h1>
     </header>
 
-    <main class="album-container">
-        <!-- 2월 21일 섹션 -->
-        <section class="date-section">
-            <div class="date-header">2026년 2월 21일</div>
-            <div class="photo-grid">
-                <div class="photo-card">
-                    <img src="사진/KakaoTalk_20260221_130137124.jpg" alt="상하이 사진 1">
-                    <div class="photo-overlay"><span class="photo-title">상하이의 풍경 #1</span></div>
-                </div>
-                <div class="photo-card">
-                    <img src="사진/KakaoTalk_20260221_130137124_01.jpg" alt="상하이 사진 2">
-                    <div class="photo-overlay"><span class="photo-title">상하이의 풍경 #2</span></div>
-                </div>
-                <div class="photo-card">
-                    <img src="사진/KakaoTalk_20260221_130137124_02.jpg" alt="상하이 사진 3">
-                    <div class="photo-overlay"><span class="photo-title">상하이의 풍경 #3</span></div>
-                </div>
-                <div class="photo-card">
-                    <img src="사진/KakaoTalk_20260221_130137124_03.jpg" alt="상하이 사진 4">
-                    <div class="photo-overlay"><span class="photo-title">상하이의 풍경 #4</span></div>
-                </div>
-                <div class="photo-card">
-                    <img src="사진/KakaoTalk_20260221_130137124_04.jpg" alt="상하이 사진 5">
-                    <div class="photo-overlay"><span class="photo-title">상하이의 풍경 #5</span></div>
-                </div>
+    <div class="container">
+        <div class="date-badge">FEBRUARY 21, 2026</div>
+        <h2 class="section-title">The City of Lights</h2>
+        
+        <div class="grid" id="photoGrid">
+            <!-- Photos -->
+            <div class="photo-card" onclick="openLightbox(this.querySelector('img').src)">
+                <img src="사진/KakaoTalk_20260221_130137124.jpg" alt="Shanghai 1">
+                <div class="caption">The Bund View</div>
             </div>
-        </section>
-    </main>
+            <div class="photo-card" onclick="openLightbox(this.querySelector('img').src)">
+                <img src="사진/KakaoTalk_20260221_130137124_01.jpg" alt="Shanghai 2">
+                <div class="caption">Neon Streets</div>
+            </div>
+            <div class="photo-card" onclick="openLightbox(this.querySelector('img').src)">
+                <img src="사진/KakaoTalk_20260221_130137124_02.jpg" alt="Shanghai 3">
+                <div class="caption">Quiet Moments</div>
+            </div>
+            <div class="photo-card" onclick="openLightbox(this.querySelector('img').src)">
+                <img src="사진/KakaoTalk_20260221_130137124_03.jpg" alt="Shanghai 4">
+                <div class="caption">Skyline Wonders</div>
+            </div>
+            <div class="photo-card" onclick="openLightbox(this.querySelector('img').src)">
+                <img src="사진/KakaoTalk_20260221_130137124_04.jpg" alt="Shanghai 5">
+                <div class="caption">Memories of Shanghai</div>
+            </div>
+        </div>
+    </div>
 
-    <footer style="text-align: center; margin-top: 50px; color: var(--text-sub); font-size: 0.9rem;">
-        &copy; 2026 Shanghai Travel Album
+    <div id="lightbox" onclick="this.style.display='none'">
+        <img src="" id="lightboxImg">
+    </div>
+
+    <footer>
+        <p>&mdash; Fin &mdash;</p>
+        <p style="font-size: 0.8rem; letter-spacing: 2px; color: #555;">2026 TRAVEL JOURNAL</p>
     </footer>
+
+    <script>
+        // Intersection Observer for scroll animation
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.photo-card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Lightbox function
+        function openLightbox(src) {
+            document.getElementById('lightboxImg').src = src;
+            document.getElementById('lightbox').style.display = 'flex';
+        }
+    </script>
 </body>
 </html>
