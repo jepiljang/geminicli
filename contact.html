@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>제휴 문의 | Shanghai Memories</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f4f7f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .form-container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 { margin-top: 0; color: #333; text-align: center; }
+        p { color: #666; font-size: 0.9rem; text-align: center; margin-bottom: 30px; }
+        .input-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #555; font-weight: 600; }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #0056b3; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #007bff; text-decoration: none; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+<div class="form-container">
+    <h2>제휴 문의</h2>
+    <p>협업 제안이나 문의사항을 남겨주세요.</p>
+    
+    <form action="https://formspree.io/f/mgolnwlz" method="POST">
+        <div class="input-group">
+            <label>성함</label>
+            <input type="text" name="name" placeholder="홍길동" required>
+        </div>
+        
+        <div class="input-group">
+            <label>이메일</label>
+            <input type="email" name="_replyto" placeholder="example@email.com" required>
+        </div>
+        
+        <div class="input-group">
+            <label>문의 내용</label>
+            <textarea name="message" rows="4" placeholder="내용을 입력해주세요" required></textarea>
+        </div>
+        
+        <button type="submit">문의 보내기</button>
+    </form>
+    
+    <a href="index.html" class="back-link">← 앨범으로 돌아가기</a>
+</div>
+
+</body>
+</html>
