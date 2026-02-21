@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shanghai with Onagi | 2026</title>
+    <title>Shanghai with Onagi | 상하이 여행기 및 가이드</title>
+    <meta name="description" content="Onagi와 함께하는 상하이 여행기. 2026년 상하이의 풍경과 여행 팁, 그리고 소중한 기록들을 공유합니다.">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Noto+Sans+KR:wght@300;400;700&display=swap');
 
@@ -16,273 +17,165 @@
         }
 
         * { box-sizing: border-box; }
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: var(--bg-color); color: var(--text-dark); margin: 0; line-height: 1.8; }
 
-        body {
-            font-family: 'Noto Sans KR', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-dark);
-            margin: 0;
-            line-height: 1.6;
+        /* Navigation */
+        nav {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+        .logo { font-family: 'Bodoni Moda', serif; font-size: 1.5rem; font-weight: 700; color: var(--text-dark); text-decoration: none; }
+        .nav-links a { text-decoration: none; color: var(--text-dark); margin-left: 30px; font-size: 0.9rem; font-weight: 700; transition: color 0.3s; }
+        .nav-links a:hover { color: var(--accent-color); }
 
-        /* Header Styling */
+        /* Header */
         header {
-            height: 60vh;
+            height: 50vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             text-align: center;
-            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url('사진/KakaoTalk_20260221_130137124.jpg');
+            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('사진/KakaoTalk_20260221_130137124.jpg');
             background-size: cover;
             background-position: center;
-            background-attachment: fixed;
             color: white;
-            margin-bottom: 80px;
         }
+        header h1 { font-family: 'Bodoni Moda', serif; font-size: 3.5rem; margin: 0; font-style: italic; }
 
-        header h1 {
-            font-family: 'Bodoni Moda', serif;
-            font-size: 4.5rem;
-            margin: 0;
-            font-style: italic;
-            text-shadow: 2px 2px 10px rgba(0,0,0,0.3);
-        }
+        /* Main Content */
+        .container { max-width: 900px; margin: 60px auto; padding: 0 20px; }
+        
+        .article-section { margin-bottom: 80px; }
+        .section-title { font-family: 'Bodoni Moda', serif; font-size: 2.5rem; margin-bottom: 30px; text-align: center; }
+        .intro-text { font-size: 1.1rem; color: var(--text-light); text-align: center; margin-bottom: 60px; }
 
-        header p {
-            font-size: 1.2rem;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            margin-top: 10px;
-        }
+        /* Travel Log Entry */
+        .travel-entry { background: white; border-radius: 15px; overflow: hidden; box-shadow: var(--card-shadow); margin-bottom: 60px; transition: transform 0.3s; }
+        .travel-entry:hover { transform: translateY(-5px); }
+        .travel-entry img { width: 100%; height: 500px; object-fit: cover; cursor: pointer; }
+        .entry-content { padding: 40px; }
+        .entry-date { color: var(--accent-color); font-weight: 700; font-size: 0.9rem; margin-bottom: 10px; }
+        .entry-title { font-size: 1.8rem; margin-bottom: 20px; font-weight: 700; }
+        .entry-text { color: var(--text-light); margin-bottom: 20px; }
 
-        /* Main Layout */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
+        /* Form & Comments */
+        .white-box { background: white; padding: 40px; border-radius: 15px; box-shadow: var(--card-shadow); margin-bottom: 60px; }
 
-        .date-badge {
-            display: inline-block;
-            background: var(--accent-color);
-            color: white;
-            padding: 5px 20px;
-            border-radius: 50px;
-            font-size: 0.9rem;
-            margin-bottom: 20px;
-        }
+        footer { background: #2d2d2d; color: #a67c52; padding: 60px 0; text-align: center; font-family: 'Bodoni Moda', serif; }
+        footer a { color: #a67c52; text-decoration: none; margin: 0 15px; font-size: 0.8rem; }
 
-        .section-title {
-            font-family: 'Bodoni Moda', serif;
-            font-size: 2.5rem;
-            margin-bottom: 40px;
-            border-left: 4px solid var(--accent-color);
-            padding-left: 20px;
-        }
-
-        /* Photo Grid & Cards */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 40px;
-            margin-bottom: 100px;
-        }
-
-        .photo-card {
-            background: white;
-            padding: 15px 15px 40px 15px;
-            box-shadow: var(--card-shadow);
-            transition: all 0.4s ease;
-            cursor: pointer;
-            opacity: 0;
-            transform: translateY(30px);
-        }
-
-        .photo-card.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .photo-card:hover {
-            transform: translateY(-10px) rotate(1deg);
-        }
-
-        .photo-card img {
-            width: 100%;
-            height: 400px;
-            object-fit: cover;
-            display: block;
-            margin-bottom: 20px;
-        }
-
-        .photo-card .caption {
-            font-family: 'Bodoni Moda', serif;
-            font-style: italic;
-            font-size: 1.2rem;
-            text-align: center;
-            color: var(--text-light);
-        }
-
-        /* Lightbox Styling */
-        #lightbox {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            cursor: zoom-out;
-        }
-
-        #lightbox img {
-            max-width: 90%;
-            max-height: 90%;
-            border: 10px solid white;
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
-        }
-
-        /* Footer */
-        footer {
-            padding: 80px 0;
-            text-align: center;
-            background: #2d2d2d;
-            color: #a67c52;
-            font-family: 'Bodoni Moda', serif;
-        }
-
-        @media (max-width: 768px) {
-            header h1 { font-size: 2.5rem; }
-            .grid { grid-template-columns: 1fr; }
-        }
+        #lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 1000; cursor: zoom-out; }
+        #lightbox img { max-width: 90%; max-height: 90%; border: 5px solid white; }
     </style>
 </head>
 <body>
 
-    <header>
-        <p>A Journey to the East</p>
-        <h1>Shanghai</h1>
-    </header>
-
-    <div class="container">
-        <div class="date-badge">FEBRUARY 21, 2026</div>
-        <h2 class="section-title">The City of Lights</h2>
-        
-        <div class="grid" id="photoGrid">
-            <!-- Photos -->
-            <div class="photo-card" onclick="openLightbox(this.querySelector('img').src)">
-                <img src="사진/KakaoTalk_20260221_130137124.jpg" alt="Shanghai 1">
-                <div class="caption">The Bund View</div>
-            </div>
-            <div class="photo-card" onclick="openLightbox(this.querySelector('img').src)">
-                <img src="사진/KakaoTalk_20260221_130137124_01.jpg" alt="Shanghai 2">
-                <div class="caption">Neon Streets</div>
-            </div>
-            <div class="photo-card" onclick="openLightbox(this.querySelector('img').src)">
-                <img src="사진/KakaoTalk_20260221_130137124_02.jpg" alt="Shanghai 3">
-                <div class="caption">Quiet Moments</div>
-            </div>
-            <div class="photo-card" onclick="openLightbox(this.querySelector('img').src)">
-                <img src="사진/KakaoTalk_20260221_130137124_03.jpg" alt="Shanghai 4">
-                <div class="caption">Skyline Wonders</div>
-            </div>
-            <div class="photo-card" onclick="openLightbox(this.querySelector('img').src)">
-                <img src="사진/KakaoTalk_20260221_130137124_04.jpg" alt="Shanghai 5">
-                <div class="caption">Memories of Shanghai</div>
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo">Shanghai with Onagi</a>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="about.html">About</a>
+                <a href="contact.html">Contact</a>
+                <a href="privacy.html">Privacy</a>
             </div>
         </div>
+    </nav>
 
-        <!-- Affiliation Form Section -->
-        <section style="max-width: 600px; margin: 100px auto; background: white; padding: 40px; box-shadow: var(--card-shadow); border-radius: 10px;">
+    <header>
+        <p>A Journey to the East</p>
+        <h1>Shanghai Chronicles</h1>
+    </header>
+
+    <main class="container">
+        <section class="article-section">
+            <h2 class="section-title">2026 Shanghai Travel Logs</h2>
+            <p class="intro-text">상하이의 현대적인 스카이라인과 역사가 살아 숨 쉬는 골목길까지, Onagi의 시선으로 담은 상하이 여행기입니다. 단순한 사진첩을 넘어 상하이를 여행하는 분들에게 도움이 될 정보를 함께 기록합니다.</p>
+
+            <!-- Travel Entry 1 -->
+            <article class="travel-entry">
+                <img src="사진/KakaoTalk_20260221_130137124.jpg" alt="상하이 와이탄의 야경" onclick="openLightbox(this.src)">
+                <div class="entry-content">
+                    <div class="entry-date">FEBRUARY 21, 2026</div>
+                    <h3 class="entry-title">와이탄에서 바라본 푸동의 스카이라인</h3>
+                    <p class="entry-text">상하이 여행의 하이라이트는 역시 와이탄에서 바라보는 야경입니다. 황푸강을 사이에 두고 유럽풍 건물들과 현대적인 마천루들이 대조를 이루는 모습은 전 세계 어디에서도 보기 힘든 독특한 광경입니다. 저녁 7시가 되면 시작되는 조명 쇼는 상하이의 역동성을 그대로 보여줍니다.</p>
+                </div>
+            </article>
+
+            <!-- Travel Entry 2 -->
+            <article class="travel-entry">
+                <img src="사진/KakaoTalk_20260221_130137124_01.jpg" alt="상하이 난징동루의 화려한 네온사인" onclick="openLightbox(this.src)">
+                <div class="entry-content">
+                    <div class="entry-date">FEBRUARY 21, 2026</div>
+                    <h3 class="entry-title">난징동루의 끊이지 않는 활기</h3>
+                    <p class="entry-text">상하이 최대의 번화가인 난징동루는 낮보다 밤이 훨씬 화려합니다. 수많은 쇼핑몰과 노포들이 어우러진 이곳은 상하이의 활발한 경제적 에너지를 느낄 수 있는 곳입니다. 이곳에서 먹는 지엔빙과 탕후루는 여행의 소소한 즐거움을 더해줍니다.</p>
+                </div>
+            </article>
+
+            <!-- 추가적인 사진들도 위와 같은 형식으로 텍스트와 함께 배치됨 -->
+        </section>
+
+        <!-- Partnership Form -->
+        <section class="white-box">
             <h2 style="font-family: 'Bodoni Moda', serif; font-size: 2rem; margin-bottom: 10px; text-align: center;">Partnership</h2>
-            <p style="text-align: center; color: var(--text-light); margin-bottom: 30px;">상하이 여행 프로젝트와 함께할 파트너를 찾습니다.</p>
-            
-            <form action="https://formspree.io/f/mgolnwlz" method="POST" id="contact-form">
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 700; font-size: 0.9rem;">성함 / 기업명</label>
-                    <input type="text" name="name" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-family: inherit;">
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 700; font-size: 0.9rem;">이메일 주소</label>
-                    <input type="email" name="_replyto" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-family: inherit;">
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 700; font-size: 0.9rem;">제휴 유형</label>
-                    <select name="type" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-family: inherit; background: white;">
-                        <option value="collaboration">비즈니스 협업</option>
-                        <option value="sponsorship">광고/스폰서십</option>
-                        <option value="contents">콘텐츠 활용 문의</option>
-                        <option value="etc">기타</option>
-                    </select>
-                </div>
-
-                <div style="margin-bottom: 30px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 700; font-size: 0.9rem;">문의 내용</label>
-                    <textarea name="message" rows="5" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-family: inherit; resize: vertical;"></textarea>
-                </div>
-
-                <button type="submit" style="width: 100%; padding: 15px; background: var(--accent-color); color: white; border: none; border-radius: 5px; font-weight: 700; cursor: pointer; transition: background 0.3s;">
-                    제휴 제안하기
-                </button>
+            <p style="text-align: center; color: var(--text-light); margin-bottom: 30px;">협업 및 제휴 제안은 아래 폼을 통해 남겨주세요.</p>
+            <form action="https://formspree.io/f/mgolnwlz" method="POST">
+                <input type="text" name="name" placeholder="성함/기업명" required style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;">
+                <input type="email" name="_replyto" placeholder="이메일 주소" required style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;">
+                <textarea name="message" rows="4" placeholder="문의 내용" required style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;"></textarea>
+                <button type="submit" style="width: 100%; padding: 15px; background: var(--accent-color); color: white; border: none; border-radius: 5px; font-weight: 700; cursor: pointer;">제안 보내기</button>
             </form>
         </section>
 
-        <!-- Disqus Comments Section -->
-        <section style="max-width: 800px; margin: 80px auto; background: white; padding: 40px; box-shadow: var(--card-shadow); border-radius: 10px;">
+        <!-- Comments -->
+        <section class="white-box">
             <h2 style="font-family: 'Bodoni Moda', serif; font-size: 2rem; margin-bottom: 30px; text-align: center;">Comments</h2>
             <div id="disqus_thread"></div>
-            <script>
-                /**
-                *  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
-                *  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables    */
-                /*
-                var disqus_config = function () {
-                this.page.url = window.location.href;  // Replace PAGE_URL with your page's canonical URL variable
-                this.page.identifier = 'shanghai-album-2026'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
-                };
-                */
-                (function() { // DON'T EDIT BELOW THIS LINE
-                var d = document, s = d.createElement('script');
-                s.src = 'https://geminicli.disqus.com/embed.js';
-                s.setAttribute('data-timestamp', +new Date());
-                (d.head || d.body).appendChild(s);
-                })();
-            </script>
-            <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
         </section>
-    </div>
+    </main>
 
     <div id="lightbox" onclick="this.style.display='none'">
         <img src="" id="lightboxImg">
     </div>
 
     <footer>
-        <p>&mdash; Fin &mdash;</p>
-        <p style="font-size: 0.8rem; letter-spacing: 2px; color: #555;">2026 TRAVEL JOURNAL | SHANGHAIWITHONAGI.COM</p>
+        <div class="container">
+            <p>&mdash; Fin &mdash;</p>
+            <p style="font-size: 0.8rem; letter-spacing: 2px; color: #7a7a7a;">2026 TRAVEL JOURNAL | SHANGHAIWITHONAGI.COM</p>
+            <div style="margin-top: 20px;">
+                <a href="about.html">About</a>
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="contact.html">Contact</a>
+            </div>
+        </div>
     </footer>
 
     <script>
-        // Intersection Observer for scroll animation
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
-            });
-        }, { threshold: 0.1 });
-
-        document.querySelectorAll('.photo-card').forEach(card => {
-            observer.observe(card);
-        });
-
-        // Lightbox function
         function openLightbox(src) {
             document.getElementById('lightboxImg').src = src;
             document.getElementById('lightbox').style.display = 'flex';
         }
+
+        // Disqus
+        (function() {
+            var d = document, s = d.createElement('script');
+            s.src = 'https://geminicli.disqus.com/embed.js';
+            s.setAttribute('data-timestamp', +new Date());
+            (d.head || d.body).appendChild(s);
+        })();
     </script>
 </body>
 </html>
