@@ -1,0 +1,10 @@
+.env
+.env.example
+token_cache.json
+ledger.json
+data/raw/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+.mcp.json
