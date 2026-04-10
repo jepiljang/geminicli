@@ -18,5 +18,8 @@ plotly>=5.20.0
 # 알림
 python-telegram-bot>=21.0
 
+# 하이퍼파라미터 튜닝
+optuna>=4.0.0
+
 # 유틸
 tqdm>=4.66.0
