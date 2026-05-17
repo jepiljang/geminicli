@@ -146,6 +146,8 @@ def run_pipeline(
     use_cache: bool = True,
     universe_subset: list[str] | None = None,
     exemplar_weight: float = 0.0,
+    top_mcap: int | None = None,
+    min_mcap: float = 0.0,
 ) -> pd.DataFrame:
     """
     전체 추천 파이프라인을 실행한다.
@@ -156,6 +158,9 @@ def run_pipeline(
         top_n: 최종 추출할 상위 종목 수
         use_cache: 캐시 사용 여부
         universe_subset: 특정 종목 리스트 (None이면 전체 유니버스)
+        exemplar_weight: 7번째 팩터 가중치
+        top_mcap: 시가총액 상위 N개로 제한 (None이면 전체)
+        min_mcap: 최소 시가총액 (USD)
 
     Returns:
         전체 종목 스코어 DataFrame (정렬됨)
@@ -165,9 +170,12 @@ def run_pipeline(
         tickers = universe_subset
         print(f"커스텀 유니버스: {len(tickers)}개 종목")
     else:
-        universe_df = get_universe()
+        universe_df = get_universe(top_n_by_mcap=top_mcap, min_market_cap=min_mcap)
         tickers = universe_df["ticker"].tolist()
-        print(f"전체 유니버스: {len(tickers)}개 종목")
+        if top_mcap:
+            print(f"시총 상위 {top_mcap}개 유니버스: {len(tickers)}개 종목")
+        else:
+            print(f"전체 유니버스: {len(tickers)}개 종목")
 
     # 2. 데이터 수집
     data_list = batch_fetch(tickers, period=period, max_workers=max_workers, use_cache=use_cache)
@@ -216,6 +224,10 @@ if __name__ == "__main__":
     parser.add_argument("--subset", type=str, default=None, help="종목 리스트 (콤마 구분)")
     parser.add_argument("--exemplar-weight", type=float, default=0.0,
                         help="7번째 팩터(모범 유사도) 가중치 0~0.4 (기본 0 = 비활성)")
+    parser.add_argument("--top-mcap", type=int, default=None,
+                        help="시가총액 상위 N개로 유니버스 제한 (예: 3000)")
+    parser.add_argument("--min-mcap", type=float, default=0.0,
+                        help="최소 시가총액 (USD, 예: 1e8=1억달러)")
 
     args = parser.parse_args()
 
@@ -230,4 +242,6 @@ if __name__ == "__main__":
         use_cache=not args.no_cache,
         universe_subset=subset,
         exemplar_weight=args.exemplar_weight,
+        top_mcap=args.top_mcap,
+        min_mcap=args.min_mcap,
     )
