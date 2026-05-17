@@ -33,6 +33,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SCORES_DIR = PROJECT_ROOT / "data" / "scores"
 CACHE_DIR = PROJECT_ROOT / "data" / "cache"
 UNIVERSE_DIR = PROJECT_ROOT / "data" / "universe"
+BACKTEST_DIR = PROJECT_ROOT / "data" / "backtest"
 EXEMPLAR_DIR = PROJECT_ROOT / "data" / "exemplars"
 EXEMPLAR_JSON = EXEMPLAR_DIR / "exemplars.json"
 PROFILES_DIR = EXEMPLAR_DIR / "profiles"
@@ -53,6 +54,45 @@ def reset_caches() -> dict:
         p.unlink()
         counts["scores"] += 1
     return counts
+
+
+def run_backtest_subprocess(top_mcap: int, top_n: int, rebalance: str):
+    """recommendation.backtest 모듈을 subprocess로 실행하고 stdout을 한 줄씩 yield."""
+    cmd = [
+        _sys.executable, "-m", "recommendation.backtest",
+        "--top-mcap", str(top_mcap),
+        "--top-n", str(top_n),
+        "--rebalance", rebalance,
+        "--use-cache",
+    ]
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        cwd=str(PROJECT_ROOT), text=True, encoding="utf-8", errors="replace",
+        bufsize=1,
+    )
+    try:
+        for line in proc.stdout:
+            yield line.rstrip()
+    finally:
+        proc.wait()
+        if proc.returncode != 0:
+            yield f"[ERROR] backtest exited with code {proc.returncode}"
+
+
+def load_latest_backtest() -> tuple[dict | None, pd.DataFrame | None]:
+    """가장 최근 백테스트 결과(summary.json + equity.parquet) 로드."""
+    if not BACKTEST_DIR.exists():
+        return None, None
+    summaries = sorted(BACKTEST_DIR.glob("*_summary.json"), reverse=True)
+    if not summaries:
+        return None, None
+    summary_path = summaries[0]
+    equity_path = BACKTEST_DIR / summary_path.name.replace("_summary.json", "_equity.parquet")
+    import json as _json
+    with open(summary_path, encoding="utf-8") as f:
+        summary = _json.load(f)
+    equity_df = pd.read_parquet(equity_path) if equity_path.exists() else None
+    return summary, equity_df
 
 
 def run_refresh_pipeline(top_mcap: int, exemplar_weight: float = 0.0):
@@ -369,8 +409,35 @@ if refresh_clicked:
     st.cache_resource.clear()
     st.rerun()
 
+st.sidebar.divider()
+st.sidebar.subheader("백테스트")
+bt_mcap = st.sidebar.number_input(
+    "유니버스 시총 상위 N개", min_value=50, max_value=8000, value=5000, step=500,
+    key="bt_mcap",
+)
+bt_topn = st.sidebar.number_input("Top N 픽", min_value=3, max_value=50, value=10, step=1)
+bt_rebalance = st.sidebar.selectbox(
+    "리밸런싱 빈도",
+    options=["W-MON", "W-FRI", "2W-MON", "M"],
+    index=0,
+    help="W-MON=매주 월요일, M=매월 말일",
+)
+bt_clicked = st.sidebar.button("🧪 백테스트 실행", type="secondary",
+                                help="현재 캐시된 가격 데이터로 워크포워드 백테스트. ~10-15분 소요")
+
+if bt_clicked:
+    with st.sidebar.status("백테스트 실행 중...", expanded=True) as status:
+        log_box = st.empty()
+        log_lines: list[str] = []
+        for line in run_backtest_subprocess(int(bt_mcap), int(bt_topn), bt_rebalance):
+            log_lines.append(line)
+            log_box.code("\n".join(log_lines[-15:]), language=None)
+        status.update(label="✅ 백테스트 완료", state="complete", expanded=False)
+    st.cache_data.clear()
+    st.rerun()
+
 # 탭 구성
-tab1, tab2, tab3, tab4 = st.tabs(["🏆 Top 추천", "📊 전체 랭킹", "🔍 종목 상세", "📚 모범 라이브러리"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏆 Top 추천", "📊 전체 랭킹", "🔍 종목 상세", "📚 모범 라이브러리", "🧪 백테스트"])
 
 # ─── Tab 1: Top 추천 ───
 with tab1:
@@ -573,3 +640,88 @@ with tab4:
     render_exemplar_form()
     st.divider()
     render_exemplar_list()
+
+# ─── Tab 5: 백테스트 ───
+with tab5:
+    st.subheader("백테스트 결과")
+    bt_summary, bt_equity = load_latest_backtest()
+
+    if bt_summary is None:
+        st.info("아직 백테스트 결과가 없습니다. 사이드바에서 **🧪 백테스트 실행** 버튼을 누르세요.")
+    else:
+        # KPI 카드
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("총 수익률",
+                      f"{bt_summary['total_return']*100:+.2f}%",
+                      delta=f"SPY {bt_summary['spy_total_return']*100:+.2f}%")
+        with col2:
+            st.metric("연환산 수익률", f"{bt_summary['annualized_return']*100:+.2f}%")
+        with col3:
+            st.metric("Sharpe Ratio", f"{bt_summary['sharpe_ratio']:.2f}")
+        with col4:
+            st.metric("Max Drawdown", f"{bt_summary['max_drawdown']*100:.2f}%")
+
+        col5, col6, col7, col8 = st.columns(4)
+        with col5:
+            alpha = bt_summary['alpha_vs_spy']
+            st.metric("Alpha vs SPY (연환산)", f"{alpha*100:+.2f}%",
+                      delta="목표 > 0", delta_color="off")
+        with col6:
+            st.metric("연환산 변동성", f"{bt_summary['annualized_volatility']*100:.2f}%")
+        with col7:
+            st.metric("리밸런싱", f"{bt_summary['n_rebalances']}회")
+        with col8:
+            st.metric("최종 자본",
+                      f"${bt_summary['final_capital']:,.0f}",
+                      delta=f"${bt_summary['final_capital'] - bt_summary['initial_capital']:+,.0f}")
+
+        st.caption(f"기간: {bt_summary['start_date']} ~ {bt_summary['end_date']}")
+
+        # KPI 통과 여부
+        kpi_pass = {
+            "Alpha > 0": alpha > 0,
+            "Sharpe > 1.0": bt_summary['sharpe_ratio'] > 1.0,
+            "Max DD > -20%": bt_summary['max_drawdown'] > -0.20,
+            "Strategy > SPY": bt_summary['total_return'] > bt_summary['spy_total_return'],
+        }
+        passed = sum(kpi_pass.values())
+        st.write(f"### KPI 통과: {passed}/{len(kpi_pass)}")
+        kpi_cols = st.columns(len(kpi_pass))
+        for i, (name, ok) in enumerate(kpi_pass.items()):
+            with kpi_cols[i]:
+                st.write(f"{'✅' if ok else '❌'} {name}")
+
+        # 자본 곡선 차트
+        if bt_equity is not None and not bt_equity.empty:
+            st.divider()
+            st.subheader("자본 곡선 (전략 vs SPY)")
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=bt_equity.index, y=bt_equity["strategy"],
+                name="Strategy", line=dict(color="rgb(67, 147, 195)", width=2),
+            ))
+            fig.add_trace(go.Scatter(
+                x=bt_equity.index, y=bt_equity["spy"],
+                name="SPY", line=dict(color="rgb(200, 100, 100)", width=2, dash="dash"),
+            ))
+            fig.update_layout(
+                height=400, hovermode="x unified",
+                xaxis_title="Date", yaxis_title="Portfolio Value ($)",
+                margin=dict(l=40, r=40, t=20, b=40),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            # 일별 수익률 차트
+            st.subheader("일별 수익률 (전략)")
+            daily_returns = bt_equity["strategy"].pct_change().dropna() * 100
+            fig2 = go.Figure()
+            fig2.add_trace(go.Bar(
+                x=daily_returns.index, y=daily_returns,
+                marker_color=["green" if r > 0 else "red" for r in daily_returns],
+            ))
+            fig2.update_layout(
+                height=200, yaxis_title="Daily Return (%)",
+                margin=dict(l=40, r=40, t=20, b=40),
+            )
+            st.plotly_chart(fig2, use_container_width=True)
