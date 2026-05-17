@@ -49,6 +49,12 @@
 │   └── app.py                 # Streamlit 대시보드 (SPY 비교 차트)
 ├── notification/
 │   └── telegram.py            # Telegram 알림 모듈
+├── recommendation/
+│   └── exemplar/              # 모범 패턴 매칭 (7번째 팩터)
+│       ├── features.py        # 10개 기술적 피처
+│       ├── profile.py         # 프로파일 빌드/저장/로드
+│       ├── library.py         # 모범 라이브러리 CRUD
+│       └── similarity.py      # 후보 스코어링
 └── .env                       # API 키 (gitignored)
 ```
 
@@ -115,6 +121,12 @@ python notification/telegram.py --test
 
 # 의존성 설치
 pip install -r requirements.txt
+
+# 7번째 팩터(모범 유사도) 활성화 추천 실행
+python -m recommendation.pipeline --exemplar-weight 0.20
+
+# 테스트 실행 (slow 제외)
+pytest tests/ -m "not slow"
 ```
 
 ---
