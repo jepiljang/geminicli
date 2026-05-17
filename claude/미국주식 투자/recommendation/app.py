@@ -276,12 +276,26 @@ if score_date:
     if scores_df.empty:
         st.sidebar.error(f"{score_date} 데이터 없음")
 
+st.sidebar.divider()
+st.sidebar.subheader("모범 유사도 팩터")
+exemplar_weight = st.sidebar.slider("가중치", 0.0, 0.40, 0.20, 0.05,
+                                     help="0이면 7번째 팩터 비활성. 슬라이더 변경은 재실행 후 반영됩니다.")
+lib_preview = get_library()
+n_active = sum(1 for e in lib_preview.list_all() if e.active)
+n_total = len(lib_preview.list_all())
+st.sidebar.caption(f"활성 모범: {n_active} / {n_total}")
+if n_active == 0:
+    st.sidebar.warning("활성 모범이 없습니다 — 7번째 팩터가 비활성화됩니다.")
+
 # 탭 구성
 tab1, tab2, tab3, tab4 = st.tabs(["🏆 Top 추천", "📊 전체 랭킹", "🔍 종목 상세", "📚 모범 라이브러리"])
 
 # ─── Tab 1: Top 추천 ───
 with tab1:
     st.subheader(f"Top {top_n} 추천 종목")
+
+    if "exemplar_similarity" not in scores_df.columns:
+        st.caption("💡 모범 유사도 팩터를 활성화하려면 사이드바에서 가중치를 조정 후 `python -m recommendation.pipeline --exemplar-weight 0.20`을 실행하세요.")
 
     # 분석 결과를 딕셔너리로 변환
     analysis_dict = {a["ticker"]: a for a in analyses} if analyses else {}
@@ -304,6 +318,15 @@ with tab1:
             with col:
                 st.markdown(f"### #{row['rank']} {ticker}")
                 st.metric("Total Score", f"{row['total_score']:.1f}")
+
+                # 모범 유사도 표시 (있을 때만)
+                if "exemplar_similarity" in row.index and pd.notna(row.get("exemplar_similarity")):
+                    best_id = row.get("best_match_id", "")
+                    best_name = ""
+                    if best_id:
+                        match_ex = lib_preview.get(best_id)
+                        best_name = match_ex.name if match_ex else best_id
+                    st.caption(f"모범 유사도: {row['exemplar_similarity']:.1f} ({best_name} 닮음)")
 
                 if analysis:
                     st.markdown(render_rating_badge(analysis.get("rating", "N/A")))
@@ -406,6 +429,41 @@ with tab3:
             # 레이더 차트
             radar_fig = render_radar_chart(row)
             st.plotly_chart(radar_fig, use_container_width=True)
+
+        # 모범 유사도 분해 (있을 때만)
+        if "exemplar_similarity" in row.index and pd.notna(row.get("exemplar_similarity")):
+            st.divider()
+            st.subheader("모범 유사도 분해")
+            best_id = row.get("best_match_id", "")
+            match_ex = lib_preview.get(best_id) if best_id else None
+            if match_ex:
+                profile_path = PROJECT_ROOT / match_ex.profile_path
+                if profile_path.exists():
+                    profile = load_profile(profile_path)
+                    cache_file = CACHE_DIR / f"{selected_ticker}_{date.today().isoformat()}.parquet"
+                    if not cache_file.exists():
+                        cache_files = sorted(CACHE_DIR.glob(f"{selected_ticker}_*.parquet"), reverse=True)
+                        cache_file = cache_files[0] if cache_files else None
+                    if cache_file and cache_file.exists():
+                        candidate_df = pd.read_parquet(cache_file)
+                        try:
+                            from recommendation.exemplar.features import compute_features_snapshot
+                            snap = compute_features_snapshot(candidate_df)
+                            rows = []
+                            for k in FEATURE_KEYS:
+                                mu = profile[k]["mean"]
+                                sigma = profile[k]["std"]
+                                cv = snap[k]
+                                z = (cv - mu) / sigma if sigma > 1e-6 else 0.0
+                                rows.append({
+                                    "피처": k,
+                                    f"모범 (μ±σ)": f"{mu:.4f} ± {sigma:.4f}",
+                                    "후보 오늘": f"{cv:.4f}",
+                                    "z-거리": f"{z:+.2f}",
+                                })
+                            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                        except ValueError as e:
+                            st.warning(f"스냅샷 계산 실패: {e}")
 
         # Claude 분석
         if analysis:
