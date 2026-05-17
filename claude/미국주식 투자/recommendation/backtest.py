@@ -239,6 +239,10 @@ def main():
     parser.add_argument("--capital", type=float, default=100_000.0)
     parser.add_argument("--use-cache", action="store_true",
                         help="data/cache의 당일 가격 캐시 사용 (없으면 yf.download 호출)")
+    parser.add_argument("--period", default="3y",
+                        help="가격 데이터 기간 (1y/2y/3y/5y, 기본 3y)")
+    parser.add_argument("--refresh-cache", action="store_true",
+                        help="당일 캐시 무시하고 강제 재다운로드 (period 변경 시 필요)")
     args = parser.parse_args()
 
     print(f"유니버스 로드 (시총 상위 {args.top_mcap}개)...")
@@ -247,18 +251,22 @@ def main():
     print(f"  {len(tickers)}개 종목")
 
     today_iso = date_cls.today().isoformat()
-    if args.use_cache:
+    if args.refresh_cache:
+        print(f"강제 재다운로드 ({args.period} 기간)...")
+        results = batch_fetch(tickers, period=args.period, use_cache=False)
+        price_data = {r["ticker"]: r["price_df"] for r in results}
+    elif args.use_cache:
         price_data = _load_cached_prices(tickers, today_iso)
         print(f"캐시 적중: {len(price_data)}/{len(tickers)}개")
         missing = [t for t in tickers if t not in price_data]
         if missing:
             print(f"누락 {len(missing)}개 → yf.download 보충 호출")
-            extra = batch_fetch(missing, period="1y", use_cache=True)
+            extra = batch_fetch(missing, period=args.period, use_cache=True)
             for r in extra:
                 price_data[r["ticker"]] = r["price_df"]
     else:
-        print("가격 데이터 수집 (yf.download bulk)...")
-        results = batch_fetch(tickers, period="1y", use_cache=True)
+        print(f"가격 데이터 수집 ({args.period}, yf.download bulk)...")
+        results = batch_fetch(tickers, period=args.period, use_cache=True)
         price_data = {r["ticker"]: r["price_df"] for r in results}
 
     print(f"수집 완료: {len(price_data)}개 가격 데이터")
