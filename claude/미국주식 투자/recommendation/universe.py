@@ -25,13 +25,26 @@ NASDAQ_HEADERS = {
 
 _TICKER_PATTERN = re.compile(r"^[A-Z]{1,5}$")
 
-# 이름에 다음 패턴이 있으면 우선주/채권/워런트/유닛 등으로 보고 제외.
-# Common Stock/ADR/Ordinary Shares는 보통주로 살림.
+# 이름에 다음 패턴이 있으면 비-보통주로 보고 제외:
+#  - 우선주 마커: Preferred Stock, Cumulative, % Series
+#  - 채권: Notes due, Senior Notes, Subordinated Notes, Debenture
+#  - 파생: Warrant, Right(s), Unit(s)
+#  - SPAC: Acquisition Corp, Merger Corp (합병 전 빈 껍데기)
+#  - 폐쇄형펀드(CEF): Term Trust, Income Fund, Equity Fund, Opportunities Fund,
+#                    Beneficial Interest
+# 보존: Common Stock, American Depositary, Ordinary Shares (외국 ADR 살림)
 _NAME_BLACKLIST = re.compile(
     r"Preferred Stock|Notes due|% Notes|Warrant|\bRights?\b|\bUnits?\b"
-    r"|Convertible Debenture|Subordinated Notes",
+    r"|Convertible Debenture|Subordinated Notes|Senior Notes|Cumulative"
+    r"|Acquisition Corp|Merger\s+\S*\s*Corp"
+    r"|Term Trust|Income Fund|Equity Fund|Opportunities Fund"
+    r"|Convertible Income|Beneficial Interest",
     re.IGNORECASE,
 )
+# Depositary Shares는 외국 ADR(American Depositary Shares)과 우선주 변형 두 가지가 섞임.
+# American 접두어 없으면 우선주 변형으로 보고 제외.
+_DEPOSITARY_PATTERN = re.compile(r"Depositary Shares", re.IGNORECASE)
+_AMERICAN_DEPOSITARY_PATTERN = re.compile(r"American Depositary", re.IGNORECASE)
 
 
 def _parse_market_cap(raw: str | None) -> float:
@@ -82,10 +95,15 @@ def filter_investable(df: pd.DataFrame) -> pd.DataFrame:
     - 시가총액이 0 (정보 없거나 거래 중단)
     - 이름에 Preferred/Notes/Warrant/Right/Unit 등 비-보통주 패턴 포함
     """
+    name = df["name"].fillna("")
     mask_ticker = df["ticker"].str.match(_TICKER_PATTERN)
     mask_mcap = df["market_cap"] > 0
-    mask_name = ~df["name"].fillna("").str.contains(_NAME_BLACKLIST)
-    return df[mask_ticker & mask_mcap & mask_name].reset_index(drop=True)
+    mask_name = ~name.str.contains(_NAME_BLACKLIST)
+    # Depositary Shares 처리: American Depositary가 아니면 제외 (우선주 변형)
+    has_depositary = name.str.contains(_DEPOSITARY_PATTERN)
+    has_american = name.str.contains(_AMERICAN_DEPOSITARY_PATTERN)
+    mask_depositary = ~(has_depositary & ~has_american)
+    return df[mask_ticker & mask_mcap & mask_name & mask_depositary].reset_index(drop=True)
 
 
 def get_universe(
@@ -117,10 +135,12 @@ def get_universe(
     if df is None:
         print("NASDAQ Screener에서 티커 목록 다운로드 중...")
         df = fetch_all_tickers()
-        df = filter_investable(df)
-        df = df.sort_values("market_cap", ascending=False).reset_index(drop=True)
         df.to_parquet(TICKERS_FILE, index=False)
-        print(f"유니버스 저장 완료: {len(df)}개 종목 → {TICKERS_FILE}")
+        print(f"유니버스 캐시 저장: {len(df)}개 원본 → {TICKERS_FILE}")
+
+    # 필터는 캐시 적중 시에도 매번 적용 (블랙리스트가 바뀌어도 즉시 반영되도록)
+    df = filter_investable(df)
+    df = df.sort_values("market_cap", ascending=False).reset_index(drop=True)
 
     if min_market_cap > 0:
         df = df[df["market_cap"] >= min_market_cap].reset_index(drop=True)
