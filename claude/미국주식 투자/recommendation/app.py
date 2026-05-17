@@ -26,6 +26,8 @@ from recommendation.news_fetcher import fetch_news_for_tickers
 from recommendation.exemplar.features import FEATURE_KEYS
 from recommendation.exemplar.library import Exemplar, ExemplarLibrary, make_exemplar_id
 from recommendation.exemplar.profile import build_profile, load_profile, save_profile
+from recommendation.analysis_request import create_request, list_pending
+from recommendation.news_fetcher import fetch_news_yfinance
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SCORES_DIR = PROJECT_ROOT / "data" / "scores"
@@ -107,6 +109,21 @@ def render_rating_badge(rating: str) -> str:
         "Avoid": "🔴",
     }
     return f"{colors.get(rating, '⚪')} {rating}"
+
+
+def trigger_analysis_request(ticker: str, score_row: pd.Series, key_prefix: str = "") -> None:
+    """분석 요청 버튼 + 결과 토스트. score_row는 Top 카드/상세 어디서든 호출 가능."""
+    pending = list_pending(ticker)
+    if pending:
+        st.caption(f"⏳ 대기 중인 요청 {len(pending)}개 — Claude 세션에서 '{ticker} 분석해줘'")
+    if st.button(f"🤖 {ticker} 분석 요청", key=f"{key_prefix}analyze_{ticker}"):
+        with st.spinner(f"{ticker} 뉴스 수집 중..."):
+            news = fetch_news_yfinance(ticker, max_items=5)
+            path = create_request(ticker, score_row, news_items=news)
+        st.success(
+            f"요청 생성됨: `{path.name}` (뉴스 {len(news)}개 포함)\n\n"
+            f"Claude Code 세션에서 **'{ticker} 분석해줘'** 라고 말하세요."
+        )
 
 
 def render_radar_chart(row: pd.Series) -> go.Figure:
@@ -397,7 +414,8 @@ with tab1:
                     st.markdown(render_rating_badge(analysis.get("rating", "N/A")))
                     st.caption(analysis.get("summary", ""))
                 else:
-                    st.caption("AI 분석 대기 중")
+                    st.caption("AI 분석 없음")
+                    trigger_analysis_request(ticker, row, key_prefix="card_")
 
                 # 미니 팩터 바
                 factors = {
@@ -531,14 +549,24 @@ with tab3:
                             st.warning(f"스냅샷 계산 실패: {e}")
 
         # Claude 분석
+        st.divider()
         if analysis:
-            st.divider()
             st.subheader("Claude AI 의견")
             st.markdown(f"**등급:** {render_rating_badge(analysis.get('rating', 'N/A'))}")
             st.markdown(f"**요약:** {analysis.get('summary', 'N/A')}")
             st.markdown(f"**카탈리스트:** {analysis.get('catalyst', 'N/A')}")
             st.markdown(f"**리스크:** {analysis.get('risk', 'N/A')}")
             st.markdown(f"**홀딩 기간:** {analysis.get('holding_period', 'N/A')}")
+            # 상세 리포트 파일 표시
+            from recommendation.analysis_request import REPORT_DIR
+            from datetime import date as _date
+            report_files = sorted(REPORT_DIR.glob(f"{selected_ticker}_*.md"), reverse=True)
+            if report_files:
+                with st.expander(f"📄 상세 리포트 ({report_files[0].stem})"):
+                    st.markdown(report_files[0].read_text(encoding="utf-8"))
+        else:
+            st.subheader("AI 분석 없음")
+            trigger_analysis_request(selected_ticker, row, key_prefix="detail_")
 
 # ─── Tab 4: 모범 라이브러리 ───
 with tab4:
