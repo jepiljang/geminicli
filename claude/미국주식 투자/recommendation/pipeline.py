@@ -70,70 +70,121 @@ def fetch_ticker_data(ticker: str, period: str = "1y") -> dict:
         return None
 
 
+def _bulk_download_chunk(
+    tickers_chunk: list[str],
+    period: str,
+    max_retries: int = 3,
+    backoff_base: float = 5.0,
+) -> dict[str, pd.DataFrame]:
+    """yf.download로 한 청크를 일괄 다운로드 후 티커별 DataFrame 딕셔너리 반환.
+
+    rate limit 시 backoff_base * 2^attempt 초 대기 후 재시도.
+    """
+    import time as _time
+
+    if not tickers_chunk:
+        return {}
+
+    raw = None
+    last_exc: Exception | None = None
+    for attempt in range(max_retries):
+        try:
+            raw = yf.download(
+                tickers_chunk,
+                period=period,
+                group_by="ticker",
+                auto_adjust=True,
+                threads=True,
+                progress=False,
+                timeout=30,
+            )
+            if not raw.empty:
+                break
+        except Exception as e:
+            last_exc = e
+
+        wait = backoff_base * (2 ** attempt)
+        print(f"  rate-limited or empty, retry {attempt + 1}/{max_retries} after {wait:.0f}s")
+        _time.sleep(wait)
+
+    if raw is None or raw.empty:
+        if last_exc:
+            print(f"WARN: bulk download failed for chunk: {last_exc}")
+        return {}
+
+    out: dict[str, pd.DataFrame] = {}
+    if len(tickers_chunk) == 1:
+        # 단일 티커일 때는 multi-index 아닌 일반 DataFrame
+        if not raw.empty:
+            out[tickers_chunk[0]] = raw.dropna(how="all")
+        return out
+
+    for ticker in tickers_chunk:
+        if ticker not in raw.columns.get_level_values(0):
+            continue
+        df = raw[ticker].dropna(how="all")
+        if not df.empty:
+            out[ticker] = df
+    return out
+
+
 def batch_fetch(
     tickers: list[str],
     period: str = "1y",
     max_workers: int = 10,
     use_cache: bool = True,
+    chunk_size: int = 100,
 ) -> list[dict]:
     """
-    여러 종목 데이터를 병렬로 수집한다.
+    여러 종목 데이터를 yf.download 벌크 호출로 수집한다.
 
     Args:
         tickers: 티커 리스트
         period: 데이터 기간
-        max_workers: 병렬 스레드 수
-        use_cache: 캐시 사용 여부
+        max_workers: (사용 안 함 — yf.download가 내부 멀티스레드 처리)
+        use_cache: 당일 캐시 사용 여부
+        chunk_size: yf.download 한 호출당 티커 수 (yfinance 권장 ~100)
 
     Returns:
-        성공한 종목 데이터 리스트
+        성공한 종목 데이터 리스트. info는 빈 dict (벌크 모드는 가격만).
     """
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    results = []
-    to_fetch = []
+    results: list[dict] = []
+    to_fetch: list[str] = []
+    today = date.today().isoformat()
 
     if use_cache:
-        today = date.today().isoformat()
         for ticker in tickers:
             cache_file = CACHE_DIR / f"{ticker}_{today}.parquet"
             if cache_file.exists():
                 try:
                     price_df = pd.read_parquet(cache_file)
-                    results.append({
-                        "ticker": ticker,
-                        "price_df": price_df,
-                        "info": {},  # 캐시에서는 info 없음
-                    })
-                    continue
+                    if len(price_df) >= 50:
+                        results.append({"ticker": ticker, "price_df": price_df, "info": {}})
+                        continue
                 except Exception:
                     pass
             to_fetch.append(ticker)
     else:
-        to_fetch = tickers
+        to_fetch = list(tickers)
 
     if not to_fetch:
         return results
 
-    print(f"데이터 수집: {len(to_fetch)}개 종목 (캐시 히트: {len(results)}개)")
+    print(f"데이터 수집: {len(to_fetch)}개 종목 (캐시 히트: {len(results)}개), 청크 크기 {chunk_size}")
 
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {
-            executor.submit(fetch_ticker_data, ticker, period): ticker
-            for ticker in to_fetch
-        }
-
-        for future in tqdm(as_completed(futures), total=len(futures), desc="Fetching"):
-            result = future.result()
-            if result:
-                # 캐시 저장
-                ticker = result["ticker"]
-                today = date.today().isoformat()
-                cache_file = CACHE_DIR / f"{ticker}_{today}.parquet"
-                try:
-                    result["price_df"].to_parquet(cache_file)
-                except Exception:
-                    pass
-                results.append(result)
+    chunks = [to_fetch[i:i + chunk_size] for i in range(0, len(to_fetch), chunk_size)]
+    for chunk in tqdm(chunks, desc="Bulk download"):
+        data_by_ticker = _bulk_download_chunk(chunk, period)
+        for ticker, df in data_by_ticker.items():
+            if len(df) < 50:
+                continue
+            cache_file = CACHE_DIR / f"{ticker}_{today}.parquet"
+            try:
+                df.to_parquet(cache_file)
+            except Exception:
+                pass
+            results.append({"ticker": ticker, "price_df": df, "info": {}})
 
     print(f"수집 완료: {len(results)}개 종목 성공 / {len(tickers)}개 전체")
     return results

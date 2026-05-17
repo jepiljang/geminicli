@@ -25,6 +25,14 @@ NASDAQ_HEADERS = {
 
 _TICKER_PATTERN = re.compile(r"^[A-Z]{1,5}$")
 
+# 이름에 다음 패턴이 있으면 우선주/채권/워런트/유닛 등으로 보고 제외.
+# Common Stock/ADR/Ordinary Shares는 보통주로 살림.
+_NAME_BLACKLIST = re.compile(
+    r"Preferred Stock|Notes due|% Notes|Warrant|\bRights?\b|\bUnits?\b"
+    r"|Convertible Debenture|Subordinated Notes",
+    re.IGNORECASE,
+)
+
 
 def _parse_market_cap(raw: str | None) -> float:
     if not raw:
@@ -70,11 +78,14 @@ def fetch_all_tickers() -> pd.DataFrame:
 def filter_investable(df: pd.DataFrame) -> pd.DataFrame:
     """
     투자 불가능한 종목 제외:
-    - 티커가 1~5자 영문 대문자가 아님 (워런트/우선주/유닛 등)
+    - 티커가 1~5자 영문 대문자가 아님 (특수문자 포함된 우선주 등)
     - 시가총액이 0 (정보 없거나 거래 중단)
+    - 이름에 Preferred/Notes/Warrant/Right/Unit 등 비-보통주 패턴 포함
     """
-    mask = df["ticker"].str.match(_TICKER_PATTERN) & (df["market_cap"] > 0)
-    return df[mask].reset_index(drop=True)
+    mask_ticker = df["ticker"].str.match(_TICKER_PATTERN)
+    mask_mcap = df["market_cap"] > 0
+    mask_name = ~df["name"].fillna("").str.contains(_NAME_BLACKLIST)
+    return df[mask_ticker & mask_mcap & mask_name].reset_index(drop=True)
 
 
 def get_universe(
