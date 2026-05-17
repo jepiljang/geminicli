@@ -13,6 +13,8 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import numpy as np
+import subprocess
+import sys as _sys
 from pathlib import Path
 from datetime import date, datetime
 
@@ -28,9 +30,49 @@ from recommendation.exemplar.profile import build_profile, load_profile, save_pr
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SCORES_DIR = PROJECT_ROOT / "data" / "scores"
 CACHE_DIR = PROJECT_ROOT / "data" / "cache"
+UNIVERSE_DIR = PROJECT_ROOT / "data" / "universe"
 EXEMPLAR_DIR = PROJECT_ROOT / "data" / "exemplars"
 EXEMPLAR_JSON = EXEMPLAR_DIR / "exemplars.json"
 PROFILES_DIR = EXEMPLAR_DIR / "profiles"
+
+
+def reset_caches() -> dict:
+    """유니버스/오늘 가격/오늘 스코어 캐시를 삭제하고 삭제된 파일 수 반환."""
+    counts = {"universe": 0, "prices": 0, "scores": 0}
+    universe_file = UNIVERSE_DIR / "tickers.parquet"
+    if universe_file.exists():
+        universe_file.unlink()
+        counts["universe"] = 1
+    today = date.today().isoformat()
+    for p in CACHE_DIR.glob(f"*_{today}.parquet"):
+        p.unlink()
+        counts["prices"] += 1
+    for p in SCORES_DIR.glob(f"{today}_scores.parquet"):
+        p.unlink()
+        counts["scores"] += 1
+    return counts
+
+
+def run_refresh_pipeline(top_mcap: int, exemplar_weight: float = 0.0):
+    """파이프라인을 subprocess로 실행하고 stdout을 한 줄씩 yield한다."""
+    cmd = [
+        _sys.executable, "-m", "recommendation.pipeline",
+        "--top-mcap", str(top_mcap), "--top", "30",
+    ]
+    if exemplar_weight > 0:
+        cmd.extend(["--exemplar-weight", str(exemplar_weight)])
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        cwd=str(PROJECT_ROOT), text=True, encoding="utf-8", errors="replace",
+        bufsize=1,
+    )
+    try:
+        for line in proc.stdout:
+            yield line.rstrip()
+    finally:
+        proc.wait()
+        if proc.returncode != 0:
+            yield f"[ERROR] pipeline exited with code {proc.returncode}"
 
 st.set_page_config(
     page_title="미국주식 종목 추천",
@@ -286,6 +328,29 @@ n_total = len(lib_preview.list_all())
 st.sidebar.caption(f"활성 모범: {n_active} / {n_total}")
 if n_active == 0:
     st.sidebar.warning("활성 모범이 없습니다 — 7번째 팩터가 비활성화됩니다.")
+
+st.sidebar.divider()
+st.sidebar.subheader("데이터 새로고침")
+refresh_mcap = st.sidebar.number_input(
+    "시총 상위 N개", min_value=50, max_value=8000, value=5000, step=500,
+    help="유니버스 + 가격 캐시 전체 재수집 후 재스코어링",
+)
+refresh_clicked = st.sidebar.button("🔄 전체 새로고침", type="primary",
+                                     help="유니버스(NASDAQ) + 오늘 가격 + 스코어 캐시 삭제 후 재실행")
+
+if refresh_clicked:
+    with st.sidebar.status("데이터 새로고침 중...", expanded=True) as status:
+        counts = reset_caches()
+        status.write(f"캐시 삭제: 유니버스 {counts['universe']}, 가격 {counts['prices']}, 스코어 {counts['scores']}")
+        log_box = st.empty()
+        log_lines: list[str] = []
+        for line in run_refresh_pipeline(int(refresh_mcap), exemplar_weight):
+            log_lines.append(line)
+            log_box.code("\n".join(log_lines[-15:]), language=None)
+        status.update(label="✅ 새로고침 완료", state="complete", expanded=False)
+    st.cache_data.clear()
+    st.cache_resource.clear()
+    st.rerun()
 
 # 탭 구성
 tab1, tab2, tab3, tab4 = st.tabs(["🏆 Top 추천", "📊 전체 랭킹", "🔍 종목 상세", "📚 모범 라이브러리"])
